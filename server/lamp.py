@@ -12,7 +12,7 @@ class Lamp(Device):
         else:
             print("{} has the light off".format(super(Lamp,self).get_info(), self.on))
     
-    def set_data(self):
+    def update(self):
         self.on = not self.on
         state = "lighting" if self.on else "switching off"
         print("{} is now {} the lamp".format(super(Lamp,self).get_info(), state))

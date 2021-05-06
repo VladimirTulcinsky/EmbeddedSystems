@@ -12,7 +12,7 @@ class DoorLock(Device):
         else:
             print("{} has registered an open door".format(super(DoorLock,self).get_info(), self.locked))
     
-    def set_data(self):
+    def update(self):
         self.locked = not self.locked
         state = "closing" if self.locked else "opening"
         print("{} is now {} the door".format(super(DoorLock,self).get_info(), state))

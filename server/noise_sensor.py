@@ -11,3 +11,6 @@ class NoiseSensor(Device):
         
         else:
             print("{}: everything is fine, currently registering {} dBA".format(super(NoiseSensor,self).get_info(), self.dBA))
+
+    def update(self):
+        print("You have subscribed to {}. Once noise data is sent, you'll be noticed".format(super(NoiseSensor,self).get_info().lower()))
