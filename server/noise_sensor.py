@@ -4,6 +4,7 @@ class NoiseSensor(Device):
     def __init__(self, name, location, id):
         super().__init__(name, location, id)
         self.dBA = 50
+        self.subscribed = False
 
     def get_data(self):
         if self.dBA > 90:
@@ -12,5 +13,13 @@ class NoiseSensor(Device):
         else:
             print("{}: everything is fine, currently registering {} dBA".format(super(NoiseSensor,self).get_info(), self.dBA))
 
+    def set_data(self, new_noise):
+        self.dBA = new_noise
+
     def update(self):
-        print("You have subscribed to {}. Once noise data is sent, you'll be noticed".format(super(NoiseSensor,self).get_info().lower()))
+        self.subscribed = not self.subscribed
+        if self.subscribed:
+            print("You have subscribed to {}.".format(super(NoiseSensor,self).get_info().lower()))
+            self.get_data()
+        else:
+            print("You have unsubscribed to {}. Data will not be sent anymore".format(super(NoiseSensor,self).get_info().lower()))
