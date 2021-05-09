@@ -5,22 +5,27 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ipv6/uip-udp-packet.h"
 #include "sys/ctimer.h"
+#include "dev/leds.h"
+#include "dev/button-sensor.h"
 
 #include <stdio.h>
 #include <string.h>
 
+#include <time.h>
+#include <stdlib.h>
+
 #define UDP_CLIENT_PORT 8765
 #define UDP_SERVER_PORT 5678
 
-#define UDP_EXAMPLE_ID 190
+/*---------------------------------------------------------------------------*/
+#define USE_PROXIMITY 0
+#define USE_NOISE 1
+/*---------------------------------------------------------------------------*/
 
 #define DEBUG DEBUG_PRINT
 #include "net/ipv6/uip-debug.h"
 
-#define START_INTERVAL (15 * CLOCK_SECOND)
-#define SEND_INTERVAL (60 * CLOCK_SECOND)
-#define SEND_TIME (random_rand() % (SEND_INTERVAL))
-#define MAX_PAYLOAD_LEN 30
+#define MAX_PAYLOAD_LEN 3
 
 static struct uip_udp_conn *client_conn;
 static uip_ipaddr_t server_ipaddr;
@@ -42,19 +47,50 @@ tcpip_handler(void)
     }
 }
 /*---------------------------------------------------------------------------*/
-static void
-send_packet(void *ptr)
+#if USE_NOISE
+static int
+get_noise(void)
 {
-    static int seq_id;
-    char buf[MAX_PAYLOAD_LEN];
+    int data_to_send = random_rand() % 120;
+    return data_to_send;
+}
 
-    seq_id++;
+/*---------------------------------------------------------------------------*/
+static void
+send_noise(void *ptr)
+{
+    char buf[MAX_PAYLOAD_LEN];
+    int data_to_send;
+
+    data_to_send = get_noise();
+    PRINTF("noise = %d'\n'", data_to_send);
+
     PRINTF("DATA send to %d 'Hello %d'\n",
-           client_conn->ripaddr.u8[15], seq_id);
-    sprintf(buf, "Hello %d from the client", seq_id);
+           client_conn->ripaddr.u8[15], data_to_send);
+    sprintf(buf, "d=%d", data_to_send);
+    uip_udp_packet_sendto(client_conn, buf, strlen(buf),
+                          &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
+    struct ctimer *ct_ptr = ptr;
+    ctimer_reset(ct_ptr);
+}
+#endif
+/*---------------------------------------------------------------------------*/
+#if USE_PROXIMITY
+static void
+send_proximity(int value)
+{
+    char buf[MAX_PAYLOAD_LEN];
+    int data_to_send = value;
+
+    PRINTF("proximity = %d'\n'", data_to_send);
+
+    PRINTF("DATA send to %d 'Hello %d'\n",
+           client_conn->ripaddr.u8[15], data_to_send);
+    sprintf(buf, "d=%d", data_to_send);
     uip_udp_packet_sendto(client_conn, buf, strlen(buf),
                           &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
 }
+#endif
 /*---------------------------------------------------------------------------*/
 static void
 print_local_addresses(void)
@@ -95,12 +131,19 @@ set_global_address(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_client_process, ev, data)
 {
-    static struct etimer periodic;
-    static struct ctimer backoff_timer;
+#if USE_NOISE
+    static struct ctimer ct;
+    void *ct_ptr = &ct;
+    ctimer_set(&ct, CLOCK_SECOND * 5, send_noise, ct_ptr);
+#endif
+
+#if USE_PROXIMITY
+    SENSORS_ACTIVATE(button_sensor);
+#endif
 
     PROCESS_BEGIN();
 
-    PROCESS_PAUSE();
+    // PROCESS_PAUSE();
 
     set_global_address();
 
@@ -117,20 +160,36 @@ PROCESS_THREAD(udp_client_process, ev, data)
     PRINTF(" local/remote port %u/%u\n",
            UIP_HTONS(client_conn->lport), UIP_HTONS(client_conn->rport));
 
-    etimer_set(&periodic, SEND_INTERVAL);
     while (1)
     {
-        PROCESS_YIELD();
+
+        PROCESS_WAIT_EVENT();
         if (ev == tcpip_event)
         {
             tcpip_handler();
         }
+#if USE_PROXIMITY
 
-        if (etimer_expired(&periodic))
+        static uint32_t seconds = 5;
+        static struct etimer et; // Define the timer
+
+        if (ev == sensors_event)
         {
-            etimer_reset(&periodic);
-            ctimer_set(&backoff_timer, SEND_TIME, send_packet, NULL);
+            if (data == &button_sensor)
+            {
+                leds_toggle(LEDS_RED);
+                send_proximity(1);
+                etimer_set(&et, CLOCK_SECOND * seconds);
+            }
         }
+
+        if (etimer_expired(&et))
+        {
+            printf("timer");
+            leds_toggle(LEDS_RED);
+            send_proximity(0);
+        }
+#endif
     }
 
     PROCESS_END();

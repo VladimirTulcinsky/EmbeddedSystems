@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from device import Device
-from temperature_sensor import TemperatureSensor
+from proximity_sensor import ProximitySensor
 from noise_sensor import NoiseSensor
 from lamp import Lamp
 from door_lock import DoorLock
@@ -47,14 +47,14 @@ def format_data(device_message):
     return formatted_message
 
 def main():
-    temperature_sensor = TemperatureSensor("Damsecho", "locker room", 1)
-    noise_sensor = NoiseSensor("Decibeau","dancefloor", 2)
-    lamp_actuator = Lamp("Pixar", "restroom", 3)
-    door_lock_actuator = DoorLock("Pandora", "safe", 4)
+    proximity_sensor = ProximitySensor("Proximus", "sas", 2)
+    noise_sensor = NoiseSensor("Decibeau","safe", 3)
+    lamp_actuator = Lamp("Pixar", "reception", 4)
+    door_lock_actuator = DoorLock("Pandora", "safe", 5)
 
     # Share data between threads
     global IoT_devices
-    IoT_devices = [temperature_sensor, noise_sensor, lamp_actuator, door_lock_actuator]
+    IoT_devices = [proximity_sensor, noise_sensor, lamp_actuator, door_lock_actuator]
     
     print("Starting server")
     thread = threading.Thread(target=run_server)
