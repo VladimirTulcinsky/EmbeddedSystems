@@ -15,6 +15,8 @@ class NoiseSensor(Device):
 
     def set_data(self, new_noise):
         self.dBA = new_noise
+        if self.subscribed:
+            self.get_data()
 
     def update(self):
         self.subscribed = not self.subscribed

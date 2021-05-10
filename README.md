@@ -9,6 +9,8 @@ Steps have to be followed in this order for the project to work.
 3. Create a noise mote with sensor.c
 ..*  In the file sensor.c set *USE_PROXIMITY to 0* and *USE_NOISE to 1*
 
+Start the simulation on full speed to pace up the networking configuration, but once that's done set the speed to 10%!
+
 ## Tunslip
 1. Get the container name by executing *docker ps*
 2. Execute *docker container inspect <name-of-container>*

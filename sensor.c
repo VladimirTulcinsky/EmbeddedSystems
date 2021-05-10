@@ -134,7 +134,7 @@ PROCESS_THREAD(udp_client_process, ev, data)
 #if USE_NOISE
     static struct ctimer ct;
     void *ct_ptr = &ct;
-    ctimer_set(&ct, CLOCK_SECOND * 5, send_noise, ct_ptr);
+    ctimer_set(&ct, CLOCK_SECOND * 20, send_noise, ct_ptr);
 #endif
 
 #if USE_PROXIMITY
