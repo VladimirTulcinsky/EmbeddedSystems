@@ -1,13 +1,26 @@
 # How to build
+
+## Prior configuration
+* sudo usermod -aG docker <your-user>
+* in makefile of border-router comment the line PLATFORMS_EXCLUDE = nrf52dk z1
+* modify or create /etc/docker/daemon.json by adding :
+```
+{
+"ipv6": true,
+"fixed-cidr-v6": "fd00::/64"
+}
+```
+* restart by typing: sudo systemctl restart docker
+
 ## Cooja
 Start Cooja with *contiker cooja*.
 Steps have to be followed in this order for the project to work.
 
 1. Create a mote with border-router.c
 2. Create a proximity mote with sensor.c
-..* In the file sensor.c set *USE_PROXIMITY to 1* and *USE_NOISE to 0*
+    * In the file sensor.c set *USE_PROXIMITY to 1* and *USE_NOISE to 0*
 3. Create a noise mote with sensor.c
-..*  In the file sensor.c set *USE_PROXIMITY to 0* and *USE_NOISE to 1*
+    * In the file sensor.c set *USE_PROXIMITY to 0* and *USE_NOISE to 1*
 
 Start the simulation on full speed to pace up the networking configuration, but once that's done set the speed to 10%!
 

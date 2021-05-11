@@ -4,6 +4,7 @@ class DoorLock(Device):
     def __init__(self, name, location, id):
         super().__init__(name, location, id)
         self.locked = False
+        self.id = id
 
     def get_data(self):
         if self.locked:
