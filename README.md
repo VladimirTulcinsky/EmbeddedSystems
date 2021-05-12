@@ -1,7 +1,7 @@
 # How to build
 
 ## Prior configuration
-* sudo usermod -aG docker "<your-user>"
+* sudo usermod -aG docker "your-user"
 * in makefile of border-router comment the line PLATFORMS_EXCLUDE = nrf52dk z1
 * modify or create /etc/docker/daemon.json by adding :
 ```
