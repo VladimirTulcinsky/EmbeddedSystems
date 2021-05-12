@@ -1,5 +1,12 @@
 import socket
 import service
+import lamp as lp
+import proximity_sensor as ps
+import noise_sensor as ns
+import door_lock as dl
+
+
+sequence_number = 0
 
 def run_server():
     UDP_IP = "bbbb::1"
@@ -24,19 +31,93 @@ def run_server():
 def get_device_with_id(id):
     return next((obj for obj in service.IoT_devices if obj.id == int(id)), None)
 
-def send_message(id, message):
+# length signifies the number of bytes, thus needs to be multiplied by two, to compare to len(hex_str) which will count every character, so two characters per byte
+def bin2hex(binstr, length_in_bytes): 
+    print(int( binstr, 2))
+    nb_hex_characters = length_in_bytes * 2
+    hex_str = hex(int(binstr, 2))[2:] 
+    if len(hex_str) < nb_hex_characters:
+        padding = nb_hex_characters - len(hex_str)
+        hex_str = padding *'0'+hex_str
+    return hex_str
+
+def send_message(id, message, device):
     # Set IP to adress of a mote (id = network::id_of_mote)
     UDP_IP = "bbbb::c30c:0:0:{}".format(id)
     UDP_PORT = 3000
-    message = bytes(format_data(message, "send"), "utf-8")
+    message = bytes(format_data(message, "send", device), "utf-8")
     sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
     sock.sendto(message, (UDP_IP, UDP_PORT))
 
+# 2 bits
+def get_type_device(device):
+    conf = ""
+    if isinstance(device, ps.ProximitySensor):
+        conf = "01"
+    if isinstance(device, ns.NoiseSensor):
+        conf = "01"
+    if isinstance(device, lp.Lamp):
+        conf = "00"
+    if isinstance(device, dl.DoorLock):
+        conf = "00"
+    
+    return conf
+        
+# 10 bits
+def get_sequence():
+    value = service.sequence_number
+    bin_value = str(bin(value))[2:]
+    if len(bin_value) < 10:
+        padding = 10 - len(bin_value)
+        bin_value = padding *'0'+bin_value
+    service.sequence_number =+1 
+    return bin_value
+
+# 4 bits
+def get_type_of_data(device):
+    conf = ""
+    if isinstance(device, ps.ProximitySensor):
+        conf = "0000"
+    if isinstance(device, ns.NoiseSensor):
+        conf = "0001"
+    if isinstance(device, lp.Lamp):
+        conf = "0010"
+    if isinstance(device, dl.DoorLock):
+        conf = "0011"
+    
+    return conf
+    
+def padd_message(message):
+    return_value = str(message)
+    if len(return_value) < 8:
+        padding = 8 - len(return_value)
+        return_value = padding *'0'+str(message)
+        print('return value: ' + return_value)
+    
+    return return_value
+    
+
+
+
 # todo: update this method when format of protocol is decided
-def format_data(device_message, status):
-    formatted_message = None
+def format_data(device_message, status, device=None):
+
+    formatted_message = ""
 
     if status == "send":
+        print(get_type_device(device))
+        print(get_sequence())
+        print(get_type_of_data(device))
+        print("hex(int(pad et))=", (padd_message(device_message))[2:])
+
+        # the binary string that combines the protocol (type (2), sequence (10), type of data (4)) with the payload (8)
+        formatted_message = "{}{}{}{}".format(get_type_device(device), get_sequence(),get_type_of_data(device), padd_message(device_message))
+        print("formatted msg =", formatted_message)    
+        to_bytes = bin2hex(formatted_message, 3)
+        print("tobytes =", to_bytes)
+        res = bytes.fromhex(to_bytes)
+        print(res)
+        
         if isinstance(device_message, str):
             formatted_message = device_message
         elif isinstance(device_message, int):

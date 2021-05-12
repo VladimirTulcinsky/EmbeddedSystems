@@ -23,7 +23,6 @@ def main():
     thread = threading.Thread(target=run_server)
     thread.daemon = True
     thread.start()
-
     while True:
         device_to_update = ui.get_device_from_user(service.IoT_devices)
         device_to_update.update()
