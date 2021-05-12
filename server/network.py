@@ -6,8 +6,6 @@ import noise_sensor as ns
 import door_lock as dl
 
 
-sequence_number = 0
-
 def run_server():
     UDP_IP = "bbbb::1"
     UDP_PORT = 5678
@@ -46,6 +44,7 @@ def send_message(id, message, device):
     UDP_IP = "bbbb::c30c:0:0:{}".format(id)
     UDP_PORT = 3000
     message = bytes(format_data(message, "send", device), "utf-8")
+    print("message = ", message)
     sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
     sock.sendto(message, (UDP_IP, UDP_PORT))
 
@@ -105,23 +104,9 @@ def format_data(device_message, status, device=None):
     formatted_message = ""
 
     if status == "send":
-        print(get_type_device(device))
-        print(get_sequence())
-        print(get_type_of_data(device))
-        print("hex(int(pad et))=", (padd_message(device_message))[2:])
-
         # the binary string that combines the protocol (type (2), sequence (10), type of data (4)) with the payload (8)
-        formatted_message = "{}{}{}{}".format(get_type_device(device), get_sequence(),get_type_of_data(device), padd_message(device_message))
-        print("formatted msg =", formatted_message)    
-        to_bytes = bin2hex(formatted_message, 3)
-        print("tobytes =", to_bytes)
-        res = bytes.fromhex(to_bytes)
-        print(res)
-        
-        if isinstance(device_message, str):
-            formatted_message = device_message
-        elif isinstance(device_message, int):
-            formatted_message = str(device_message)
+        binary_str = "{}{}{}{}".format(get_type_device(device), get_sequence(),get_type_of_data(device), padd_message(device_message))   
+        formatted_message = bin2hex(binary_str, 3)
 
     elif status == "recieve":
         if isinstance(device_message, str):
