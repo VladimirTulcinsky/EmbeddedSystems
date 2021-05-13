@@ -26,9 +26,9 @@ Start the simulation on full speed to pace up the networking configuration, but 
 
 ## Tunslip
 1. Get the container name by executing *docker ps*
-2. Execute *docker container inspect <name-of-container>*
+2. Execute *docker container inspect "name-of-container"*
 3. Get the ip address of the container
-4. In _contiki-ng/tools/serial-io_ type and execute sudo *./tunslip6 -a <ip-address-of-contaier> -p <port-of-border-router> (probably something in the 6000x) bbbb::1/64*
+4. In _contiki-ng/tools/serial-io_ type and execute sudo *./tunslip6 -a "ip-address-of-contaier" -p "port-of-border-router" (probably something in the 6000x) bbbb::1/64*
 5. Now data can flow between the container and the host
 
 ## Python server
