@@ -16,20 +16,21 @@
 Start Cooja with *contiker cooja*.
 Steps have to be followed in this order for the project to work.
 
-1. Create a mote with border-router.c
-2. Create a proximity mote with sensor.c
-    * In the file sensor.c set *USE_PROXIMITY to 1* and *USE_NOISE to 0*
-3. Create a noise mote with sensor.c
-    * In the file sensor.c set *USE_PROXIMITY to 0* and *USE_NOISE to 1*
+1. Move the folder *EmbeddedSystems* in your *contiki-ng* folder.
+Every motes written bellow are in the folder *motes* and are Z1 mote.
+2. Create a mote with border-router.c 
+3. Create a proximity mote with proximity_mote.c
+4. Create a noise mote with noise_mote.c
 
-Start the simulation on full speed to pace up the networking configuration, but once that's done set the speed to 10%!
+Start the simulation on full speed (1000%) to pace up the networking configuration, but once that's done set the speed to 10%!
 
 ## Tunslip
 1. Get the container name by executing *docker ps*
 2. Execute *docker container inspect "name-of-container"*
 3. Get the ip address of the container
-4. In _contiki-ng/tools/serial-io_ type and execute sudo *./tunslip6 -a "ip-address-of-contaier" -p "port-of-border-router" (probably something in the 6000x) bbbb::1/64*
-5. Now data can flow between the container and the host
+4. Get the port number of the border-router by clicking right on the mote and then *More tools for Z1* and then *Serial Socket (SERVER)* and start it by licking on the *Start* button.
+5. In _contiki-ng/tools/serial-io_ type and execute sudo *./tunslip6 -a "ip-address-of-contaier" -p "port-of-border-router" (probably something in the 6000x) bbbb::1/64*
+6. Now data can flow between the container and the host
 
 ## Python server
 1. Set the port to the appropriate port of the border router.
