@@ -31,6 +31,17 @@ static struct uip_udp_conn *server_conn;
 static char buf[MAX_PAYLOAD_LEN];
 static uint16_t len;
 
+static void
+send_connection()
+{
+    char buf[MAX_PAYLOAD_LEN];
+    int data_to_send = 000000000000110000000000;
+    uip_ipaddr_t serveraddr;
+    uip_ip6addr(&serveraddr, 0xbbbb, 0, 0, 0, 0, 0, 0, 1);
+
+    sprintf(buf, "%d", data_to_send);
+    uip_udp_packet_sendto(server_conn, buf, strlen(buf), &serveraddr, UIP_HTONS(UDP_SERVER_PORT));
+}
 
 static void
 send_lampStatus(int value)
@@ -44,31 +55,32 @@ send_lampStatus(int value)
     uip_udp_packet_sendto(server_conn, buf, strlen(buf), &serveraddr, UIP_HTONS(UDP_SERVER_PORT));
 }
 
-
 static void
 tcpip_handler(void)
 {
     memset(buf, 0, MAX_PAYLOAD_LEN);
-    if(uip_newdata()) {
+    if (uip_newdata())
+    {
         len = uip_datalen();
         memcpy(buf, uip_appdata, len);
-        
+
         int x = atoi(buf);
-        if(x){
+        if (x)
+        {
             PRINTF("DOOR OPEN");
             leds_on(LEDS_GREEN);
             leds_off(LEDS_RED);
             send_lampStatus(1);
         }
-        else{
+        else
+        {
             PRINTF("DOOR CLOSE");
             leds_off(LEDS_GREEN);
             leds_on(LEDS_RED);
             send_lampStatus(0);
         }
-        
-        
-    #if SERVER_REPLY
+
+#if SERVER_REPLY
         uip_ipaddr_copy(&server_conn->ripaddr, &UIP_IP_BUF->srcipaddr);
         server_conn->rport = UIP_UDP_BUF->srcport;
 
@@ -76,11 +88,10 @@ tcpip_handler(void)
         /* Restore server connection to allow data from any node */
         uip_create_unspecified(&server_conn->ripaddr);
         server_conn->rport = 5678;
-    #endif
+#endif
     }
     return;
 }
-
 
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
@@ -94,10 +105,27 @@ PROCESS_THREAD(udp_server_process, ev, data)
 
     PRINTF("Listen port: 3000, TTL=%u\n", server_conn->ttl);
 
-    while(1) {
+    while (1)
+    {
         PROCESS_YIELD();
-        if(ev == tcpip_event) {
-            tcpip_handler();
+
+        if (connected == 0)
+        {
+            send_connection(); // Send connection to the server to say this device exist
+
+            memset(buf, 0, MAX_PAYLOAD_LEN);
+            len = uip_datalen();
+            memcpy(buf, uip_appdata, len);
+
+            int value = atoi(buf);
+            printf("%d\n", value);
+        }
+        else
+        {
+            if (ev == tcpip_event)
+            {
+                tcpip_handler();
+            }
         }
     }
 

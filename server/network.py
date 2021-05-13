@@ -40,6 +40,11 @@ def bin2hex(binstr, length_in_bytes):
         hex_str = padding *'0'+hex_str
     return hex_str
 
+def hex2bin(data_to_format):
+    scale = 16 ## equals to hexadecimal
+    num_of_bits = 24
+    bin(int(data_to_format, scale))[2:].zfill(num_of_bits)
+
 def send_message(id, message, device):
     # Set IP to adress of a mote (id = network::id_of_mote)
     UDP_IP = "bbbb::c30c:0:0:{}".format(id)
@@ -54,11 +59,11 @@ def get_type_response(device):
     conf = ""
     if isinstance(device, ps.ProximitySensor):
         conf = "01"
-    if isinstance(device, ns.NoiseSensor):
+    elif isinstance(device, ns.NoiseSensor):
         conf = "01"
-    if isinstance(device, lp.Lamp):
+    elif isinstance(device, lp.Lamp):
         conf = "00"
-    if isinstance(device, dl.DoorLock):
+    elif isinstance(device, dl.DoorLock):
         conf = "00"
     
     return conf
@@ -77,17 +82,17 @@ def get_sequence():
 
 # 4 bits
 def get_type_of_data(device):
-    conf = ""
+    type_of_data = ""
     if isinstance(device, ps.ProximitySensor):
-        conf = "0000"
-    if isinstance(device, ns.NoiseSensor):
-        conf = "0001"
-    if isinstance(device, lp.Lamp):
-        conf = "0010"
-    if isinstance(device, dl.DoorLock):
-        conf = "0011"
+        type_of_data = "0000"
+    elif isinstance(device, ns.NoiseSensor):
+        type_of_data = "0001"
+    elif isinstance(device, lp.Lamp):
+        type_of_data = "0010"
+    elif isinstance(device, dl.DoorLock):
+        type_of_data = "0011"
     
-    return conf
+    return type_of_data
 
 # 10 bits
 def padd_message(message):
@@ -99,6 +104,21 @@ def padd_message(message):
     
     return return_value
     
+# def set_type_response(binary_str):
+#     conf = binary_str[0:2]
+#     # needs ack
+#     if conf == "00":
+       
+#     elif conf == "01":
+        
+#     elif conf == "00":
+        
+#     elif conf == "00":
+#     pass
+
+
+        
+
 
 
 
@@ -113,10 +133,8 @@ def format_data(device_message, status, device=None):
         formatted_message = bin2hex(binary_str, 3)
 
     elif status == "recieve":
-        if isinstance(device_message, str):
-            formatted_message = int(device_message)
-        elif isinstance(device_message, int):
-            formatted_message = device_message
+        binary_str = hex2bin(device_message)
+        
 
    
     
