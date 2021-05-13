@@ -1,4 +1,6 @@
 from device import Device
+import socket
+import network
 
 class DoorLock(Device):
     def __init__(self, name, location, id):
@@ -17,3 +19,5 @@ class DoorLock(Device):
         self.locked = not self.locked
         state = "closing" if self.locked else "opening"
         print("{} is now {} the door".format(super(DoorLock,self).get_info(), state))
+        message = 0 if self.locked else 1
+        network.send_message(self.id, message, self)
