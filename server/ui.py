@@ -6,6 +6,7 @@ def show_devices(devices):
 
 def pretty_print(txt):
     print("\n")
+    print("ALL DEVICES:")
     print("*****************************")
     if isinstance(txt, list):
         for item in txt:

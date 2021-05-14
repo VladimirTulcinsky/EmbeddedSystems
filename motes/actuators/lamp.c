@@ -28,9 +28,12 @@ AUTOSTART_PROCESSES(&udp_server_process);
 /*---------------------------------------------------------------------------*/
 
 static struct uip_udp_conn *server_conn;
+static struct uip_udp_conn *client_conn;
+static uip_ipaddr_t server_ipaddr;
 static char buf[MAX_PAYLOAD_LEN];
 static uint16_t len;
 int sequence = 0;
+int connected = 0;
 typedef struct FormatData
 {
     char type_of_response[3];
@@ -121,19 +124,18 @@ static void hex2bin(char *hexdec, char *bits)
 /*---------------------------------------------------------------------------*/
 
 //This takes a binary char string and return it as a decimal integer
-static int
+static long
 bin2dec(char *binary_str)
 {
     char *bin = binary_str;
     char *a = bin;
-    int num = 0;
+    long num = 0;
     do
     {
         int b = *a == '1' ? 1 : 0;
         num = (num << 1) | b;
         a++;
     } while (*a);
-    printf("%X\n", num);
     return num;
 }
 
@@ -141,10 +143,10 @@ bin2dec(char *binary_str)
 
 //This function takes a decimal int, and returns an int with the decimal in binary values.
 //We made sure we never give it a big integer, as that could cause problems.
-int dec2bin(int decimalnum)
+long dec2bin(int decimalnum)
 {
-    int binarynum = 0;
-    int rem, temp = 1;
+    long binarynum = 0;
+    long rem, temp = 1;
 
     while (decimalnum != 0)
     {
@@ -153,6 +155,7 @@ int dec2bin(int decimalnum)
         binarynum = binarynum + rem * temp;
         temp = temp * 10;
     }
+
     return binarynum;
 }
 
@@ -160,18 +163,32 @@ int dec2bin(int decimalnum)
 //THIS SECTION WILL CONTAIN ALL THE NETWORKING LOGIC
 //THIS SECTION IS IDENTICAL FOR EVERY MOTE
 /*---------------------------------------------------------------------------*/
-
+/*---------------------------------------------------------------------------*/
 static void
-send_message(int value, int response_type)
+set_global_address(void)
 {
-    uip_ipaddr_t serveraddr;
-    uip_ip6addr(&serveraddr, 0xbbbb, 0, 0, 0, 0, 0, 0, 1);
+    uip_ipaddr_t ipaddr;
+
+    uip_ip6addr(&ipaddr, 0xbbbb, 0, 0, 0, 0, 0, 0, 0);
+    uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+    uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
+
+    /* set server address */
+    uip_ip6addr(&server_ipaddr, 0xbbbb, 0, 0, 0, 0, 0, 0, 1);
+}
+
+/*---------------------------------------------------------------------------*/
+
+//both values are passed along in decimal base
+static void
+send_message(int value, int type_of_response)
+{
 
     char bin_message[25];
-
     //Handles the type of message. Ack, no ack etc..
     format_data data_to_send;
-    sprintf(data_to_send.type_of_response, "%d", response_type);
+    int binary_type_response = dec2bin(type_of_response);
+    sprintf(data_to_send.type_of_response, "%d", binary_type_response);
 
     //Handles the sequence number, should be identical to sequence number received
     int binary_sequence = dec2bin(sequence);
@@ -181,22 +198,38 @@ send_message(int value, int response_type)
     strcpy(data_to_send.type_of_data, "0010"); //TODO this is still hard coded
 
     //Handles the payload
-    int binary_payload = dec2bin(value);
-    sprintf(data_to_send.payload, "%010d", binary_payload);
+    long binary_payload = dec2bin(value);
+    sprintf(data_to_send.payload, "%010ld", binary_payload);
 
     sprintf(bin_message, "%s%s%s%s", data_to_send.type_of_response, data_to_send.sequence_number, data_to_send.type_of_data, data_to_send.payload);
 
-    int decimal_message = bin2dec(bin_message);
+    long decimal_message = bin2dec(bin_message);
     char hex_message[7];
-    sprintf(hex_message, "%06x", decimal_message);
-    uip_udp_packet_sendto(server_conn, hex_message, strlen(hex_message), &serveraddr, UIP_HTONS(UDP_SERVER_PORT));
+    sprintf(hex_message, "%06lx", decimal_message);
+    printf("FULL BINARY MESSAGE: %s \n", bin_message);
+    printf("FULL decimal MESSAGE: %ld \n", decimal_message);
+    printf("FULL MESSAGE: %s \n", hex_message);
+    uip_udp_packet_sendto(server_conn, hex_message, strlen(hex_message), &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
 }
 /*---------------------------------------------------------------------------*/
+static void
+establish_connection(void *ptr)
+{
+    if (connected == 0)
+    {
+        send_message(1023, 3);
+        struct ctimer *ct_ptr = ptr;
+        ctimer_reset(ct_ptr);
+    }
+    else
+    {
+        struct ctimer *ct_ptr = ptr;
+        ctimer_stop(ct_ptr);
+    }
+}
 
 static void process_data(format_data *fd, char *binary_str)
 {
-    printf("%s \n", binary_str);
-
     memcpy(fd->type_of_response, &binary_str[0], 2);
 
     memcpy(fd->sequence_number, &binary_str[2], 8);
@@ -233,6 +266,12 @@ tcpip_handler(void)
         format_data fd;
         process_data(&fd, bits);
 
+        if (strcmp(fd.payload, "1111111111") == 0)
+        {
+            printf("CONNECTION ESTABLISHED \n");
+            connected = 1;
+        }
+
         int recieved_sequence_nb = bin2dec(fd.sequence_number);
         if (recieved_sequence_nb < sequence)
         {
@@ -254,7 +293,7 @@ tcpip_handler(void)
             leds_on(LEDS_RED);
             if (strcmp(fd.type_of_response, "00") == 0)
             {
-                send_message(1, 10);
+                send_message(1, 1);
             }
         }
         else
@@ -263,7 +302,7 @@ tcpip_handler(void)
             leds_off(LEDS_RED);
             if (strcmp(fd.type_of_response, "00") == 0)
             {
-                send_message(0, 10);
+                send_message(0, 0);
             }
         }
     }
@@ -277,10 +316,21 @@ PROCESS_THREAD(udp_server_process, ev, data)
     PROCESS_BEGIN();
     PRINTF("Starting the server\n");
 
+    set_global_address();
     server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
     udp_bind(server_conn, UIP_HTONS(3000));
 
+    /* new connection with remote host */
+    client_conn = udp_new(NULL, UIP_HTONS(UDP_SERVER_PORT), NULL);
+    udp_bind(client_conn, UIP_HTONS(UDP_CLIENT_PORT));
+
     PRINTF("Listen port: 3000, TTL=%u\n", server_conn->ttl);
+
+    static struct ctimer ct;
+    void *ct_ptr = &ct;
+    // send packets periodically to establish connection with server
+
+    ctimer_set(&ct, CLOCK_SECOND * 20, establish_connection, ct_ptr);
 
     while (1)
     {

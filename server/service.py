@@ -1,6 +1,6 @@
-def init(devices):
+def init():
     global IoT_devices
-    IoT_devices = devices
+    IoT_devices = []
     global sequence_number
     sequence_number = 1
     global MAX_SEQUENCE_BITS
