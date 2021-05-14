@@ -34,6 +34,8 @@ static char buf[MAX_PAYLOAD_LEN];
 static uint16_t len;
 int sequence = 0;
 int connected = 0;
+char type_data_field[] = "0010";
+
 typedef struct FormatData
 {
     char type_of_response[3];
@@ -55,7 +57,6 @@ static void hex2bin(char *hexdec, char *bits)
 
     while (hexdec[i])
     {
-        printf("\n iteration %d string is: %s", i, bits);
 
         switch (hexdec[i])
         {
@@ -114,8 +115,7 @@ static void hex2bin(char *hexdec, char *bits)
             strcat(bits, "1111");
             break;
         default:
-            printf("\nInvalid hexadecimal digit %c",
-                   hexdec[i]);
+            printf("\n");
         }
         i++;
     }
@@ -163,7 +163,7 @@ long dec2bin(int decimalnum)
 //THIS SECTION WILL CONTAIN ALL THE NETWORKING LOGIC
 //THIS SECTION IS IDENTICAL FOR EVERY MOTE
 /*---------------------------------------------------------------------------*/
-/*---------------------------------------------------------------------------*/
+
 static void
 set_global_address(void)
 {
@@ -195,7 +195,7 @@ send_message(int value, int type_of_response)
     sprintf(data_to_send.sequence_number, "%08d", binary_sequence);
 
     //Handles adding the device ID
-    strcpy(data_to_send.type_of_data, "0010"); //TODO this is still hard coded
+    strcpy(data_to_send.type_of_data, type_data_field);
 
     //Handles the payload
     long binary_payload = dec2bin(value);
@@ -228,7 +228,13 @@ establish_connection(void *ptr)
     }
 }
 
-static void process_data(format_data *fd, char *binary_str)
+/*---------------------------------------------------------------------------*/
+//THIS SECTION WILL CONTAIN ALL THE DEVICE SPECIFIC FUNCTIONS
+//THIS SECTION IS IDENTICAL FOR EVERY MOTE
+/*---------------------------------------------------------------------------*/
+
+static void
+process_data(format_data *fd, char *binary_str)
 {
     memcpy(fd->type_of_response, &binary_str[0], 2);
 
@@ -243,11 +249,6 @@ static void process_data(format_data *fd, char *binary_str)
     strcat(fd->type_of_data, tmp1);
 
     memcpy(fd->payload, &binary_str[14], 10);
-
-    printf("%s \n", fd->type_of_response);
-    printf("%s \n", fd->sequence_number);
-    printf("%s \n", fd->type_of_data);
-    printf("%s \n", fd->payload);
 }
 /*---------------------------------------------------------------------------*/
 
@@ -259,7 +260,7 @@ tcpip_handler(void)
     {
         len = uip_datalen();
         memcpy(buf, uip_appdata, len);
-        printf("this is the beautiful lamp %s ", buf);
+        printf("this is the beautiful lamp %s \n", buf);
         char bits[24] = {0};
         hex2bin(buf, bits);
         printf("the bits are: %s \n", bits);
@@ -280,25 +281,20 @@ tcpip_handler(void)
         }
         sequence = bin2dec(fd.sequence_number);
 
-        if (strcmp(fd.type_of_data, "0010")) //TODO change this to device ID as well
-        {
-            printf("THIS MESSAGE WAS NOT INTENDED FOR THIS DEVICE, RETURNING");
-            return;
-        }
-
         int x = atoi(fd.payload);
-        if (x)
+        PRINTF("this is x = %d\n", x);
+        if (x == 1)
         {
-            PRINTF("LIGHTS ON");
+            PRINTF("LIGHTS ON\n");
             leds_on(LEDS_RED);
             if (strcmp(fd.type_of_response, "00") == 0)
             {
                 send_message(1, 1);
             }
         }
-        else
+        else if (x == 0)
         {
-            PRINTF("LIGHTS OFF");
+            PRINTF("LIGHTS OFF\n");
             leds_off(LEDS_RED);
             if (strcmp(fd.type_of_response, "00") == 0)
             {
@@ -330,7 +326,7 @@ PROCESS_THREAD(udp_server_process, ev, data)
     void *ct_ptr = &ct;
     // send packets periodically to establish connection with server
 
-    ctimer_set(&ct, CLOCK_SECOND * 20, establish_connection, ct_ptr);
+    ctimer_set(&ct, CLOCK_SECOND * 6000, establish_connection, ct_ptr);
 
     while (1)
     {

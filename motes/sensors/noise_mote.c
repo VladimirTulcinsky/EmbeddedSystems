@@ -20,7 +20,7 @@
 #define DEBUG DEBUG_PRINT
 #include "net/ipv6/uip-debug.h"
 
-#define MAX_PAYLOAD_LEN 5
+#define MAX_PAYLOAD_LEN 8
 
 /*---------------------------------------------------------------------------*/
 PROCESS(udp_server_process, "UDP server process");
@@ -34,7 +34,7 @@ static char buf[MAX_PAYLOAD_LEN];
 static uint16_t len;
 int sequence = 0;
 int connected = 0;
-char type_data_field[] = "0011";
+char type_data_field[] = "0001";
 
 typedef struct FormatData
 {
@@ -212,19 +212,25 @@ send_message(int value, int type_of_response)
     uip_udp_packet_sendto(server_conn, hex_message, strlen(hex_message), &server_ipaddr, UIP_HTONS(UDP_SERVER_PORT));
 }
 /*---------------------------------------------------------------------------*/
+
 static void
 establish_connection(void *ptr)
 {
     if (connected == 0)
     {
+        printf("This should be disconnected so equals 0: %d \n", connected);
         send_message(1023, 3);
         struct ctimer *ct_ptr = ptr;
         ctimer_reset(ct_ptr);
     }
     else
     {
+        printf("Do we even get here? connected should be 1: %d \n", connected);
+
+        int noise = random_rand() % 120;
+        send_message(noise, 1);
         struct ctimer *ct_ptr = ptr;
-        ctimer_stop(ct_ptr);
+        ctimer_reset(ct_ptr);
     }
 }
 
@@ -263,42 +269,17 @@ tcpip_handler(void)
     {
         len = uip_datalen();
         memcpy(buf, uip_appdata, len);
-        printf("this is the beautiful lamp %s \n", buf);
+        printf("this is the beautiful noise %s \n", buf);
         char bits[24] = {0};
         hex2bin(buf, bits);
         printf("the bits are: %s \n", bits);
         format_data fd;
         process_data(&fd, bits);
-
+        printf("About to compare the payload which is: %s\n", fd.payload);
         if (strcmp(fd.payload, "1111111111") == 0)
         {
             printf("CONNECTION ESTABLISHED \n");
             connected = 1;
-        }
-
-        int recieved_sequence_nb = bin2dec(fd.sequence_number);
-        if (recieved_sequence_nb < sequence)
-        {
-            printf("SEQUENCE NUMBER TOO LOW, RETURNING");
-            return;
-        }
-        sequence = bin2dec(fd.sequence_number);
-
-        int x = atoi(fd.payload);
-        PRINTF("this is x = %d\n", x);
-        if (x == 1)
-        {
-            PRINTF("DOOR OPEN");
-            leds_on(LEDS_GREEN);
-            leds_off(LEDS_RED);
-            send_message(1, 2);
-        }
-        else if (x == 0)
-        {
-            PRINTF("DOOR CLOSE");
-            leds_off(LEDS_GREEN);
-            leds_on(LEDS_RED);
-            send_message(0, 2);
         }
     }
     return;
@@ -319,13 +300,11 @@ PROCESS_THREAD(udp_server_process, ev, data)
     client_conn = udp_new(NULL, UIP_HTONS(UDP_SERVER_PORT), NULL);
     udp_bind(client_conn, UIP_HTONS(UDP_CLIENT_PORT));
 
-    PRINTF("Listen port: 3000, TTL=%u\n", server_conn->ttl);
-
     static struct ctimer ct;
     void *ct_ptr = &ct;
     // send packets periodically to establish connection with server
 
-    ctimer_set(&ct, CLOCK_SECOND * 6000, establish_connection, ct_ptr);
+    ctimer_set(&ct, CLOCK_SECOND * 4000, establish_connection, ct_ptr);
 
     while (1)
     {

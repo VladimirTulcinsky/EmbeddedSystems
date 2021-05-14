@@ -34,7 +34,7 @@ static char buf[MAX_PAYLOAD_LEN];
 static uint16_t len;
 int sequence = 0;
 int connected = 0;
-char type_data_field[] = "0011";
+char type_data_field[] = "0000";
 
 typedef struct FormatData
 {
@@ -275,31 +275,6 @@ tcpip_handler(void)
             printf("CONNECTION ESTABLISHED \n");
             connected = 1;
         }
-
-        int recieved_sequence_nb = bin2dec(fd.sequence_number);
-        if (recieved_sequence_nb < sequence)
-        {
-            printf("SEQUENCE NUMBER TOO LOW, RETURNING");
-            return;
-        }
-        sequence = bin2dec(fd.sequence_number);
-
-        int x = atoi(fd.payload);
-        PRINTF("this is x = %d\n", x);
-        if (x == 1)
-        {
-            PRINTF("DOOR OPEN");
-            leds_on(LEDS_GREEN);
-            leds_off(LEDS_RED);
-            send_message(1, 2);
-        }
-        else if (x == 0)
-        {
-            PRINTF("DOOR CLOSE");
-            leds_off(LEDS_GREEN);
-            leds_on(LEDS_RED);
-            send_message(0, 2);
-        }
     }
     return;
 }
@@ -307,9 +282,11 @@ tcpip_handler(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(udp_server_process, ev, data)
 {
+    SENSORS_ACTIVATE(button_sensor);
 
     PROCESS_BEGIN();
     PRINTF("Starting the server\n");
+    leds_off(LEDS_RED);
 
     set_global_address();
     server_conn = udp_new(NULL, UIP_HTONS(0), NULL);
@@ -329,10 +306,27 @@ PROCESS_THREAD(udp_server_process, ev, data)
 
     while (1)
     {
+        static uint32_t seconds = 5;
+        static struct etimer et; // Define the timer
         PROCESS_YIELD();
         if (ev == tcpip_event)
         {
             tcpip_handler();
+        }
+        else if (ev == sensors_event)
+        {
+            if (data == &button_sensor)
+            {
+                leds_on(LEDS_RED);
+                send_message(1, 0);
+                etimer_set(&et, CLOCK_SECOND * seconds);
+            }
+        }
+        if (etimer_expired(&et))
+        {
+            printf("timer");
+            leds_off(LEDS_RED);
+            send_message(0, 0);
         }
     }
 

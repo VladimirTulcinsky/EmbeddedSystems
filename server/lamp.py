@@ -19,8 +19,8 @@ class Lamp(Device):
         self.get_data()
     
     def update(self):
-        message = 0 if self.on else 1
-        state = "lighting" if self.on else "switching off"
+        message = "0" if self.on else "1"
+        state = "switching off" if self.on else "lighting"
         print("{} is now {} the lamp".format(super(Lamp,self).get_info(), state))
 
         

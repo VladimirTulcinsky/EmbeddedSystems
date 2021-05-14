@@ -25,10 +25,10 @@ def main():
     thread.daemon = True
     thread.start()
     while True:
-        device_to_update = ui.get_device_from_user(service.IoT_devices)
+        device_to_update = ui.get_device_from_user()
         message_to_send = device_to_update.update()
         if message_to_send:
-            send_message(device_to_update.id, message_to_send, device_to_update)
+            send_message(device_to_update.id, int(message_to_send), device_to_update)
 
 if __name__== "__main__":
     main()

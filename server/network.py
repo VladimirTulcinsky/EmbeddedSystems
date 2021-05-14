@@ -11,6 +11,7 @@ from proximity_sensor import ProximitySensor
 from noise_sensor import NoiseSensor
 from lamp import Lamp
 from door_lock import DoorLock
+from ui import show_devices
 
 
 def run_server():
@@ -40,7 +41,7 @@ def run_server():
             # device_message = data.decode('utf-8').rsplit('=', 1)[-1]
             device_message = data.decode('utf-8')
             # print("dev id", device_id)
-            print("dev message", device_message)
+            # print("dev message", device_message)
             formatted_data = format_receiving_data(device_message, device_id)
             obj_to_update = get_device_with_id(device_id)
             if obj_to_update:
@@ -52,7 +53,7 @@ def get_device_with_id(id):
 
 # length signifies the number of bytes, thus needs to be multiplied by two, to compare to len(hex_str) which will count every character, so two characters per byte
 def bin2hex(binstr, length_in_bytes): 
-    print(int( binstr, 2))
+    # print(int( binstr, 2))
     nb_hex_characters = length_in_bytes * 2
     hex_str = hex(int(binstr, 2))[2:] 
     if len(hex_str) < nb_hex_characters:
@@ -73,7 +74,7 @@ def send_message(id, message, device=None):
     UDP_IP = "bbbb::c30c:0:0:{}".format(id)
     UDP_PORT = 3000
     message = bytes(format_sending_data(message, id, device), "utf-8")
-    print("message = ", message)
+    # print("message = ", message)
     sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
     sock.sendto(message, (UDP_IP, UDP_PORT))
 
@@ -200,44 +201,27 @@ def create_new_device(binary_str, id):
 
         # The mote is a proximity sensor
         if type_of_data == "0000":
-            new_device = ProximitySensor(new_name, new_location, id)
+            new_device = ProximitySensor(new_name, new_location, int(id))
 
         # The mote is a noise sensor
         elif type_of_data == "0001":
-            new_device = NoiseSensor(new_name, new_location, id)
+            new_device = NoiseSensor(new_name, new_location, int(id))
 
         # The mote is a lamp
         elif type_of_data == "0010":
-            new_device = Lamp(new_name, new_location, id)
+            new_device = Lamp(new_name, new_location, int(id))
 
         # The mote is a doorlock
         elif type_of_data == "0011":
-            new_device = DoorLock(new_name, new_location, id)
+            new_device = DoorLock(new_name, new_location, int(id))
         
         else:
             pass
 
         service.IoT_devices.append(new_device)
+        show_devices()
+
     
-
-# todo: update this method when format of protocol is decided
-# def format_sending_data(device_message, status, device_id=None, device=None):
-
-#     formatted_message = ""
-
-#     if status == "send":
-#         # the binary string that combines the protocol (type of response(2), sequence (8), type of data (4)) with the payload (10)
-#         binary_str = "{}{}{}{}".format(get_type_response(device), get_sequence(),get_type_of_data(device), padd_message(device_message))   
-#         formatted_message = bin2hex(binary_str, 3)
-
-#     elif status == "recieve":
-#         binary_str = hex2bin(device_message)
-#         formatted_message = handle_type_data_and_payload(binary_str) 
-
-#         # Updates the current sequence number with
-#         # set_sequence()
-
-#     return formatted_message
 
 def format_sending_data(device_message, device_id=None, device=None):
 
@@ -254,10 +238,6 @@ def format_receiving_data(device_message, device_id=None, device=None):
     formatted_message = ""
 
     binary_str = hex2bin(device_message)
-    # type_of_response = binary_str[0:2] 
-    # sequence_number = binary_str[2:10]
-    # type_of_data = binary_str[10:14] 
-    # payload = binary_str[14:24]
     
     handle_type_response(binary_str,device_id)
     formatted_message = handle_type_data_and_payload(binary_str) 

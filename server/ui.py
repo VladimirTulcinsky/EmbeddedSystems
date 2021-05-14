@@ -1,6 +1,7 @@
-def show_devices(devices):
+import service
+def show_devices():
     devices_info = []
-    for obj in devices:
+    for obj in service.IoT_devices:
         devices_info.append(obj.get_info())
     pretty_print(devices_info)   
 
@@ -16,16 +17,16 @@ def pretty_print(txt):
     print("*****************************")
     print("\n")
 
-def get_device_from_user(devices):
-    show_devices(devices)
+def get_device_from_user():
+    show_devices()
     obj_to_update = None
     while not obj_to_update:      
         user_input = int(input("Which device id do you want to update? "))
-        obj_to_update = next((obj for obj in devices if obj.id == user_input), None)
+        obj_to_update = next((obj for obj in service.IoT_devices if obj.id == user_input), None)
         if not obj_to_update:
             print("\n")
             print("This device doesn't exist, choose another one!")
-            show_devices(devices)
+            show_devices()
     else:
         print("\n")
         return obj_to_update
